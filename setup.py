@@ -18,11 +18,10 @@ setup (
 	long_description_content_type="text/markdown",
 	url="https://github.com/Cyb3rPanda/openhunt",
 	keywords="threat hunting python pandas jupyter notebook",
-	py_modules = ['HunterTools'],
-    packages=setuptools.find_packages(),
+	packages=setuptools.find_packages(),
 	install_requires=[
         'pandas',
-    ],
+    	],
 	license='GNU General Public License v3 (GPLv3)',
 	classifiers=[
         'Development Status :: 4 - Beta',
