@@ -11,14 +11,14 @@ class winlogbeat(object):
 		mordor_file = pd.read_json(path, lines = True)
 		return mordor_file
 	
-	def extract_nested_fields_winlogbeat_up_to_version_6(mordor_file):
+	def extract_nested_fields_winlogbeat_up_to_version_6(self, mordor_file):
 		event_data_field = mordor_file['event_data'].apply(pd.Series)
 		mordor_file_wo_event_data = mordor_file.drop('event_data', axis = 1)
 		df = pd.concat([mordor_file_wo_event_data, event_data_field], axis = 1)
 		mordor_df= df.dropna(axis = 1,how = 'all').rename(columns={'log_name':'channel','record_number':'record_id','source_name':'provider_name'})
 		return mordor_df
 	
-	def extract_nested_fields_winlogbeat_since_version_7(mordor_file):
+	def extract_nested_fields_winlogbeat_since_version_7(self, mordor_file):
 		winlog_field = mordor_file['winlog'].apply(pd.Series)
 		event_data_field = winlog_field['event_data'].apply(pd.Series)
 		df = pd.concat([mordor_file, winlog_field, event_data_field], axis = 1)
@@ -28,7 +28,7 @@ class winlogbeat(object):
 		mordor_df['level'] = mordor_df['log'].apply(lambda x : x.get('level'))
 		return mordor_df
 	
-	def extract_nested_fields(mordor_file):
+	def extract_nested_fields(self, mordor_file):
 		mordor_file['agent_version'] = mordor_file['@metadata'].apply(lambda x : x.get('version'))
 		mordor_file['agent_version_number'] = mordor_file['agent_version'].astype(str).str[0]
 		mordor_file['beat_type'] = mordor_file['@metadata'].apply(lambda x : x.get('beat'))
