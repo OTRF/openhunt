@@ -12,7 +12,6 @@ setuptools.setup (
 	name = 'openhunt',
 	version = '1.0',
 	author = 'Jose Rodriguez',
-	author_email = 'cyb3rpandah@gmail.com',
 	description = 'Python scripts to improve hunting campaigns',
 	long_description=long_description,
 	long_description_content_type="text/markdown",
@@ -27,11 +26,11 @@ setuptools.setup (
         'Development Status :: 4 - Beta',
         'Operating System :: OS Independent',
         'Topic :: Security',
-        'OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+		'Programming Language :: Python :: 3.7',
     ]
 )

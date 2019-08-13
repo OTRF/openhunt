@@ -1,0 +1,22 @@
+Metadata-Version: 2.1
+Name: openhunt
+Version: 1.0
+Summary: Python scripts to improve hunting campaigns
+Home-page: https://github.com/Cyb3rPanda/openhunt
+Author: Jose Rodriguez
+Author-email: cyb3rpandah@gmail.com
+License: GNU General Public License v3 (GPLv3)
+Description: # HunterTools
+        
+Keywords: threat hunting python pandas jupyter notebook
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Security
+Classifier: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Description-Content-Type: text/markdown
