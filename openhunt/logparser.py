@@ -43,15 +43,15 @@ class winlogbeat(object):
 
 		if ((mordor_file['beat_type'] == 'winlogbeat') & (mordor_file['agent_version_number'] <= '6')).any():
 			version_6_df = self.winlogbeat_6(mordor_file[(mordor_file['beat_type'] == 'winlogbeat') & (mordor_file['agent_version_number'] <= '6')])
-			mordor_df.append(version_6_df, sort = False)
+			mordor_df = mordor_df.append(version_6_df, sort = False)
 		
 		if ((mordor_file['beat_type'] == 'winlogbeat') & (mordor_file['agent_version_number'] >= '7')).any():
 			version_7_df = self.winlogbeat_7(mordor_file[(mordor_file['beat_type'] == 'winlogbeat') & (mordor_file['agent_version_number'] >= '7')])
-			mordor_df.append(version_7_df, sort = False)
+			mordor_df = mordor_df.append(version_7_df, sort = False)
 		
 		if (mordor_file['beat_type'] != 'winlogbeat').any():
 			not_winlogbeat = mordor_file[mordor_file['beat_type'] != 'winlogbeat']
-			mordor_df.append(not_winlogbeat, sort = False)
+			mordor_df = mordor_df.append(not_winlogbeat, sort = False)
 		
 		mordor_df.dropna(axis = 0,how = 'all').reset_index(drop = True)
 		
