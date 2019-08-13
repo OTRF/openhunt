@@ -3,12 +3,12 @@
 # Author: Jose Rodriguez (@Cyb3rPandaH)
 # License: GNU General Public License v3 (GPLv3)
 
-from setuptools import setup
+import setuptools
 
 with open('README.md')as f:
     long_description = f.read()
 
-setup (
+setuptools.setup (
 	name = 'openhunt',
 	version = '1.0',
 	author = 'Jose Rodriguez',
