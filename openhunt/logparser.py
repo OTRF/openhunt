@@ -5,12 +5,14 @@
 
 import pandas as pd
 from pyspark.sql import SparkSession
+print("[+] Initializing Spark Session..")
 spark = SparkSession.builder.appName("Mordor").getOrCreate()
 
 class winlogbeat(object):
 	
 	# Function to get mordor file
 	def get_mordorDF(self, path, df_type):
+		print("[+] Reading Mordor file..")
 		if df_type == 'Pandas':
 			mordorDF= pd.read_json(path, lines = True)
 		elif df_type == 'Spark':
@@ -53,6 +55,7 @@ class winlogbeat(object):
 	# Function to parse winlogbeat data (all versions)
 	def extract_nested_fields(self, path, df_type='Pandas'):
 		if df_type == 'Pandas':
+			print("[+] Processing Pandas DataFrame..")
 			mordorDF= self.get_mordorDF(path,df_type)
 			mordorDF['version'] = mordorDF['@metadata'].apply(lambda x : x.get('version'))
 			mordorDF['version'] = mordorDF['version'].astype(str).str[0]
@@ -74,13 +77,16 @@ class winlogbeat(object):
 		
 			mordor_df.dropna(axis = 0,how = 'all').reset_index(drop = True)
 		elif df_type == 'Spark':
+			print("[+] Processing Spark DataFrame..")
 			mordorDF= self.get_mordorDF(path,df_type)
 			mordorDF = mordorDF.withColumn('version', mordorDF["@metadata.version"].substr(1,1))
 			mordorDF = mordorDF.withColumn('beat_type', mordorDF["@metadata.beat"])
 
 			if (len(mordorDF.filter((mordorDF.beat_type == 'winlogbeat') & (mordorDF.version <= 6)).limit(1).take(1)) > 0 ):
+				print("[+] Processing Winlogbeat version 6 data..")
 				mordorDF_return = self.winlogbeat_6(mordorDF.filter((mordorDF.beat_type == 'winlogbeat') & (mordorDF.version <= 6)), 'Spark')
 			elif (len(mordorDF.filter((mordorDF.beat_type == 'winlogbeat') & (mordorDF.version >= 7)).limit(1).take(1)) > 0 ):
+				print("[+] Processing Winlogbeat version 7 data..")
 				mordorDF_return = self.winlogbeat_7(mordorDF.filter((mordorDF.beat_type == 'winlogbeat') & (mordorDF.version >= 7)),'Spark')
 			else:
 				exit
