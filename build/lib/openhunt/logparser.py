@@ -7,42 +7,82 @@ import pandas as pd
 
 class winlogbeat(object):
 	
-	def get_mordor_file(self, path):
-		mordor_file = pd.read_json(path, lines = True)
-		return mordor_file
+	# Function to get mordor file
+	def get_mordorDF(self, path, spark=False):
+		print("[+] Reading Mordor file..")
+		if (spark):
+			mordorDF = spark.read.json(path)
+		else:
+			mordorDF= pd.read_json(path, lines = True)
+		return mordorDF
 	
-	def extract_nested_fields_winlogbeat_up_to_version_6(self, mordor_file):
-		event_data_field = mordor_file['event_data'].apply(pd.Series)
-		mordor_file_wo_event_data = mordor_file.drop('event_data', axis = 1)
-		df = pd.concat([mordor_file_wo_event_data, event_data_field], axis = 1)
-		mordor_df= df.dropna(axis = 1,how = 'all').rename(columns={'log_name':'channel','record_number':'record_id','source_name':'provider_name'})
-		return mordor_df
+	# Function to parse winlogbeat data up to version 6
+	def winlogbeat_6(self, mordorDF, df_type):
+		print("[+] Processing Data from Winlogbeat version 6..")
+		if df_type == 'Pandas':
+			event_data_field = mordorDF['event_data'].apply(pd.Series)
+			mordorDF_wo_event_data = mordorDF.drop('event_data', axis = 1)
+			df = pd.concat([mordorDF_wo_event_data, event_data_field], axis = 1)
+			mordorDF= df.dropna(axis = 1,how = 'all').rename(columns={'log_name':'channel','record_number':'record_id','source_name':'provider_name'})
+		elif df_type == 'Spark':
+			mordorDF = mordorDF.select('event_data.*','source_name','log_name','record_number','event_id','computer_name','@timestamp')
+			mordorDF = mordorDF\
+				.withColumnRenamed("log_name", "channel")\
+    			.withColumnRenamed("source_name", "provider_name")\
+    			.withColumnRenamed("record_number","record_id")
+		else:
+			exit
+		return mordorDF
 	
-	def extract_nested_fields_winlogbeat_since_version_7(self, mordor_file):
-		winlog_field = mordor_file['winlog'].apply(pd.Series)
-		event_data_field = winlog_field['event_data'].apply(pd.Series)
-		df = pd.concat([mordor_file, winlog_field, event_data_field], axis = 1)
-		mordor_df= df.dropna(axis = 1,how = 'all').drop(['winlog','event_data'], axis = 1)
-		mordor_df['process_id'] = mordor_df['process'].apply(lambda x : x.get('pid'))
-		mordor_df['thread_id'] = mordor_df['process'].apply(lambda x : x.get('thread')).apply(lambda x : x.get('id'))
-		mordor_df['level'] = mordor_df['log'].apply(lambda x : x.get('level'))
-		return mordor_df
+	# Function to parse winlogbeat data since version 7
+	def winlogbeat_7(self, mordorDF, df_type):
+		print("[+] Processing Data from Winlogbeat version 7..")
+		if df_type == 'Pandas':
+			winlog_field = mordorDF['winlog'].apply(pd.Series)
+			event_data_field = winlog_field['event_data'].apply(pd.Series)
+			df = pd.concat([mordorDF, winlog_field, event_data_field], axis = 1)
+			mordorDF= df.dropna(axis = 1,how = 'all').drop(['winlog','event_data'], axis = 1)
+			mordorDF['process_id'] = mordorDF['process'].apply(lambda x : x.get('pid'))
+			mordorDF['thread_id'] = mordorDF['process'].apply(lambda x : x.get('thread')).apply(lambda x : x.get('id'))
+			mordorDF['level'] = mordorDF['log'].apply(lambda x : x.get('level'))
+		elif df_type == 'Spark':
+			mordorDF = mordorDF.select('winlog.event_data.*','provider_name','channel','record_id','event_id','computer_name','@timestamp')
+		else:
+			exit
+		return mordorDF
 	
-	def extract_nested_fields(self, mordor_file):
-		mordor_file['agent_version'] = mordor_file['@metadata'].apply(lambda x : x.get('version'))
-		mordor_file['agent_version_number'] = mordor_file['agent_version'].astype(str).str[0]
-		mordor_file['beat_type'] = mordor_file['@metadata'].apply(lambda x : x.get('beat'))
+	# Function to parse winlogbeat data (all versions)
+	def extract_nested_fields(self, path, spark=False):
+		if (spark):
+			print("[+] Processing a Spark DataFrame..")
+			mordorDF= self.get_mordorDF(path, spark)
+			mordorDF = mordorDF.withColumn('version', mordorDF["@metadata.version"].substr(1,1))
+			mordorDF = mordorDF.withColumn('beat_type', mordorDF["@metadata.beat"])
+			# Verify what verion of Winlogbeat was used to ship the data
+			if (len(mordorDF.filter((mordorDF.beat_type == 'winlogbeat') & (mordorDF.version <= 6)).limit(1).take(1)) > 0 ):
+				mordorDF_return = self.winlogbeat_6(mordorDF.filter((mordorDF.beat_type == 'winlogbeat') & (mordorDF.version <= 6)), 'Spark')
+			elif (len(mordorDF.filter((mordorDF.beat_type == 'winlogbeat') & (mordorDF.version >= 7)).limit(1).take(1)) > 0 ):
+				mordorDF_return = self.winlogbeat_7(mordorDF.filter((mordorDF.beat_type == 'winlogbeat') & (mordorDF.version >= 7)),'Spark')
+			else:
+				exit
+		else:
+			print("[+] Processing a Pandas DataFrame..")
+			mordorDF= self.get_mordorDF(path)
+			mordorDF['version'] = mordorDF['@metadata'].apply(lambda x : x.get('version'))
+			mordorDF['version'] = mordorDF['version'].astype(str).str[0]
+			mordorDF['beat_type'] = mordorDF['@metadata'].apply(lambda x : x.get('beat'))
+			mordorDF_return = pd.DataFrame()
+			# Verify what verion of Winlogbeat was used to ship the data
+			if ((mordorDF['beat_type'] == 'winlogbeat') & (mordorDF['version'] <= '6')).any():
+				version_6_df = self.winlogbeat_6(mordorDF[(mordorDF['beat_type'] == 'winlogbeat') & (mordorDF['version'] <= '6')], 'Pandas')
+				mordorDF_return = mordorDF_return.append(version_6_df, sort = False)		
+			if ((mordorDF['beat_type'] == 'winlogbeat') & (mordorDF['version'] >= '7')).any():
+				version_7_df = self.winlogbeat_7(mordorDF[(mordorDF['beat_type'] == 'winlogbeat') & (mordorDF['version'] >= '7')], 'Pandas')
+				mordorDF_return = mordorDF_return.append(version_7_df, sort = False)			
+			if (mordorDF['beat_type'] != 'winlogbeat').any():
+				not_winlogbeat = mordorDF[mordorDF['beat_type'] != 'winlogbeat']
+				mordorDF_return = mordorDF_return.append(not_winlogbeat, sort = False)		
+			mordorDF_return.dropna(axis = 0,how = 'all').reset_index(drop = True)
 		
-		winlogbeat_up_to_version_6 = mordor_file[(mordor_file['beat_type'] == 'winlogbeat') & (mordor_file['agent_version_number'] <= '6')]
-		if winlogbeat_up_to_version_6['@metadata'].count() >= 1:
-			winlogbeat_up_to_version_6_df = extract_nested_fields_winlogbeat_up_to_version_6(winlogbeat_up_to_version_6)
-		
-		winlogbeat_since_version_7 = mordor_file[(mordor_file['beat_type'] == 'winlogbeat') & (mordor_file['agent_version_number'] >= '7')]
-		if winlogbeat_since_version_7['@metadata'].count() >= 1:
-			winlogbeat_since_version_7_df = extract_nested_fields_winlogbeat_since_version_7(winlogbeat_since_version_7)
-    		
-		mordor_file_not_winlogbeat = mordor_file[mordor_file['beat_type'] != 'winlogbeat']
-    		
-		mordor_df = winlogbeat_up_to_version_6_df.append([winlogbeat_since_version_7,mordor_file_not_winlogbeat], sort = False).dropna(axis = 0,how = 'all').reset_index(drop = True)
-		
-		return mordor_df
+		print("[+] DataFrame Returned !")
+		return mordorDF_return

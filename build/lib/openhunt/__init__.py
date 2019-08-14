@@ -1,3 +1,3 @@
 #!/usr/bin/env python
 
-from .logparser import winlogbeat
+__all__ = ['logparser']

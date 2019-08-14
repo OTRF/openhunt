@@ -18,6 +18,7 @@ class winlogbeat(object):
 	
 	# Function to parse winlogbeat data up to version 6
 	def winlogbeat_6(self, mordorDF, df_type):
+		print("[+] Processing Data from Winlogbeat version 6..")
 		if df_type == 'Pandas':
 			event_data_field = mordorDF['event_data'].apply(pd.Series)
 			mordorDF_wo_event_data = mordorDF.drop('event_data', axis = 1)
@@ -35,6 +36,7 @@ class winlogbeat(object):
 	
 	# Function to parse winlogbeat data since version 7
 	def winlogbeat_7(self, mordorDF, df_type):
+		print("[+] Processing Data from Winlogbeat version 7..")
 		if df_type == 'Pandas':
 			winlog_field = mordorDF['winlog'].apply(pd.Series)
 			event_data_field = winlog_field['event_data'].apply(pd.Series)
@@ -44,7 +46,7 @@ class winlogbeat(object):
 			mordorDF['thread_id'] = mordorDF['process'].apply(lambda x : x.get('thread')).apply(lambda x : x.get('id'))
 			mordorDF['level'] = mordorDF['log'].apply(lambda x : x.get('level'))
 		elif df_type == 'Spark':
-			mordorDF = mordorDF.select('event_data.*','provider_name','channel','record_id','event_id','computer_name','@timestamp')
+			mordorDF = mordorDF.select('winlog.event_data.*','provider_name','channel','record_id','event_id','computer_name','@timestamp')
 		else:
 			exit
 		return mordorDF
@@ -52,41 +54,35 @@ class winlogbeat(object):
 	# Function to parse winlogbeat data (all versions)
 	def extract_nested_fields(self, path, spark=False):
 		if (spark):
-			print("[+] Processing Spark DataFrame..")
+			print("[+] Processing a Spark DataFrame..")
 			mordorDF= self.get_mordorDF(path, spark)
 			mordorDF = mordorDF.withColumn('version', mordorDF["@metadata.version"].substr(1,1))
 			mordorDF = mordorDF.withColumn('beat_type', mordorDF["@metadata.beat"])
-
+			# Verify what verion of Winlogbeat was used to ship the data
 			if (len(mordorDF.filter((mordorDF.beat_type == 'winlogbeat') & (mordorDF.version <= 6)).limit(1).take(1)) > 0 ):
-				print("[+] Processing Winlogbeat version 6 data..")
 				mordorDF_return = self.winlogbeat_6(mordorDF.filter((mordorDF.beat_type == 'winlogbeat') & (mordorDF.version <= 6)), 'Spark')
 			elif (len(mordorDF.filter((mordorDF.beat_type == 'winlogbeat') & (mordorDF.version >= 7)).limit(1).take(1)) > 0 ):
-				print("[+] Processing Winlogbeat version 7 data..")
 				mordorDF_return = self.winlogbeat_7(mordorDF.filter((mordorDF.beat_type == 'winlogbeat') & (mordorDF.version >= 7)),'Spark')
 			else:
 				exit
 		else:
-			print("[+] Processing Pandas DataFrame..")
+			print("[+] Processing a Pandas DataFrame..")
 			mordorDF= self.get_mordorDF(path)
 			mordorDF['version'] = mordorDF['@metadata'].apply(lambda x : x.get('version'))
 			mordorDF['version'] = mordorDF['version'].astype(str).str[0]
 			mordorDF['beat_type'] = mordorDF['@metadata'].apply(lambda x : x.get('beat'))
-
 			mordorDF_return = pd.DataFrame()
-
+			# Verify what verion of Winlogbeat was used to ship the data
 			if ((mordorDF['beat_type'] == 'winlogbeat') & (mordorDF['version'] <= '6')).any():
 				version_6_df = self.winlogbeat_6(mordorDF[(mordorDF['beat_type'] == 'winlogbeat') & (mordorDF['version'] <= '6')], 'Pandas')
-				mordorDF_return = mordorDF_return.append(version_6_df, sort = False)
-			
+				mordorDF_return = mordorDF_return.append(version_6_df, sort = False)		
 			if ((mordorDF['beat_type'] == 'winlogbeat') & (mordorDF['version'] >= '7')).any():
 				version_7_df = self.winlogbeat_7(mordorDF[(mordorDF['beat_type'] == 'winlogbeat') & (mordorDF['version'] >= '7')], 'Pandas')
-				mordorDF_return = mordorDF_return.append(version_7_df, sort = False)
-			
+				mordorDF_return = mordorDF_return.append(version_7_df, sort = False)			
 			if (mordorDF['beat_type'] != 'winlogbeat').any():
 				not_winlogbeat = mordorDF[mordorDF['beat_type'] != 'winlogbeat']
-				mordorDF_return = mordorDF_return.append(not_winlogbeat, sort = False)
-		
+				mordorDF_return = mordorDF_return.append(not_winlogbeat, sort = False)		
 			mordorDF_return.dropna(axis = 0,how = 'all').reset_index(drop = True)
 		
-		print("[+] Returning DataFrame..")
+		print("[+] DataFrame Returned !")
 		return mordorDF_return
