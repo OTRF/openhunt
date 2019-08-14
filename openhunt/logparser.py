@@ -86,7 +86,7 @@ class winlogbeat(object):
 				not_winlogbeat = mordorDF[mordorDF['beat_type'] != 'winlogbeat']
 				mordorDF_return = mordorDF_return.append(not_winlogbeat, sort = False)
 		
-			mordor_df.dropna(axis = 0,how = 'all').reset_index(drop = True)
+			mordorDF_return.dropna(axis = 0,how = 'all').reset_index(drop = True)
 		
 		print("[+] Returning DataFrame..")
 		return mordorDF_return
