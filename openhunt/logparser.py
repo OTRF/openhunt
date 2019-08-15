@@ -39,8 +39,8 @@ class winlogbeat(object):
 	
 	# Function to parse winlogbeat data since version 7
 	def winlogbeat_7(self, mordorDF, df_type):
+		print("[+] Processing Data from Winlogbeat version 7..")
 		if df_type == 'Pandas':
-			print("[+] Processing Data from Winlogbeat version 7..")
 			winlog_field = mordorDF['winlog'].apply(pd.Series)
 			event_data_field = winlog_field['event_data'].apply(pd.Series)
 			event_data_field = self.clean_fields(event_data_field)
@@ -48,7 +48,13 @@ class winlogbeat(object):
 			mordorDF= df.dropna(axis = 1,how = 'all').drop(['winlog','event_data','process'], axis = 1)
 			mordorDF['level'] = mordorDF['log'].apply(lambda x : x.get('level'))
 		elif df_type == 'Spark':
-			mordorDF = mordorDF.select('winlog.event_data.*','provider_name','channel','record_id','event_id','computer_name','@timestamp','message')
+			mordorDF = mordorDF.select('winlog.event_data.*','winlog.channel','winlog.provider_name','winlog.record_id','winlog.event_id','winlog.computer_name','@timestamp','message')
+			mordorDF = mordorDF\
+				.withColumnRenamed("winlog.channel", "channel")\
+    			.withColumnRenamed("winlog.provider_name", "provider_name")\
+    			.withColumnRenamed("winlog.record_id","record_id")\
+				.withColumnRenamed("winlog.event_id","event_id")\
+				.withColumnRenamed("winlog.computer_name","computer_name")
 		else:
 			exit
 		return mordorDF
