@@ -4,11 +4,10 @@
 # License: GNU General Public License v3 (GPLv3)
 
 import pandas as pd
-from pandas.io.json import json_normalize
-import json
 
 class winlogbeat(object):
 	
+	# Function to read a json file
 	def get_mordorDF(self, path, spark=False):
 		print("[+] Reading Mordor file..")
 		if (spark):
@@ -16,20 +15,6 @@ class winlogbeat(object):
 		else:
 			mordorDF= pd.read_json(path, lines = True)
 		return mordorDF
-	
-	def clean_fields(self, event_data):
-		repeat_good = { 
-			'Ipaddress' : 'IpAddress',
-			'ProcessID' : 'ProcessId',
-			'processId' : 'ProcessId',
-			'type' : 'Type'
-		} 
-		# Iterating over values 
-		for repeat, good in repeat_good.items(): 
-			if repeat in event_data.columns:
-				event_data[good].fillna(event_data[repeat])
-				event_data = event_data.drop(columns=[repeat])
-		return event_data
 	
 	# Function to parse winlogbeat data up to version 6
 	def winlogbeat_6(self, mordorDF, df_type):
@@ -41,9 +26,7 @@ class winlogbeat(object):
 			mordorDF_flat = pd.concat([mordorDF, event_data_field], axis = 1)
 			mordorDF= mordorDF_flat\
 				.dropna(axis = 1,how = 'all')\
-				.rename(columns={'log_name':'channel','record_number':'record_id','source_name':'provider_name'})\
-				.drop(['process_id','thread_id'], axis = 1)
-			mordorDF = self.clean_fields(mordorDF)
+				.rename(columns={'log_name':'channel','record_number':'record_id','source_name':'provider_name'})
 		elif df_type == 'Spark':
 			mordorDF = mordorDF.select('event_data.*','source_name','log_name','record_number','event_id','computer_name','@timestamp','message')
 			mordorDF = mordorDF\
@@ -56,14 +39,18 @@ class winlogbeat(object):
 	
 	# Function to parse winlogbeat data since version 7
 	def winlogbeat_7(self, mordorDF, df_type):
-		print("[+] Processing Data from Winlogbeat version 7..")
-		winlog_field = mordorDF['winlog'].apply(pd.Series)
-		event_data_field = winlog_field['event_data'].apply(pd.Series)
-		event_data_field = self.clean_fields(event_data_field)
-		mordorDF_flat = pd.concat([mordorDF, winlog_field, event_data_field], axis = 1)
-		mordorDF= df.dropna(axis = 1,how = 'all').drop(['winlog','event_data','process'], axis = 1)
-		mordorDF['level'] = mordorDF['log'].apply(lambda x : x.get('level'))
-		mordorDF = self.clean_fields(mordorDF)
+		if df_type == 'Pandas':
+			print("[+] Processing Data from Winlogbeat version 7..")
+			winlog_field = mordorDF['winlog'].apply(pd.Series)
+			event_data_field = winlog_field['event_data'].apply(pd.Series)
+			event_data_field = self.clean_fields(event_data_field)
+			mordorDF_flat = pd.concat([mordorDF, winlog_field, event_data_field], axis = 1)
+			mordorDF= df.dropna(axis = 1,how = 'all').drop(['winlog','event_data','process'], axis = 1)
+			mordorDF['level'] = mordorDF['log'].apply(lambda x : x.get('level'))
+		elif df_type == 'Spark':
+			mordorDF = mordorDF.select('winlog.event_data.*','provider_name','channel','record_id','event_id','computer_name','@timestamp','message')
+		else:
+			exit
 		return mordorDF
 	
 	# Function to parse winlogbeat data (all versions)
