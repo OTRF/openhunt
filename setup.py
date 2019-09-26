@@ -10,9 +10,9 @@ with open('README.md')as f:
 
 setuptools.setup (
 	name = 'openhunt',
-	version = '1.5',
+	version = '1.6.2',
 	author = 'Jose Rodriguez',
-	description = 'Python scripts to improve hunting campaigns',
+	description = 'A Python library to expedite the analysis of data during hunting engagements',
 	long_description=long_description,
 	long_description_content_type="text/markdown",
 	url="https://github.com/Cyb3rPanda/openhunt",
@@ -20,6 +20,10 @@ setuptools.setup (
 	packages=setuptools.find_packages(),
 	install_requires=[
         'pandas',
+		'altair',
+		'seaborn',
+		'matplotlib',
+		'pyspark'
     	],
 	license='GNU General Public License v3 (GPLv3)',
 	classifiers=[

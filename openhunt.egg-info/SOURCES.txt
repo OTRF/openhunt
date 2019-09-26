@@ -2,6 +2,7 @@ README.md
 setup.cfg
 setup.py
 openhunt/__init__.py
+openhunt/analytics.py
 openhunt/logparser.py
 openhunt.egg-info/PKG-INFO
 openhunt.egg-info/SOURCES.txt
