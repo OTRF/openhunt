@@ -80,7 +80,7 @@ class summaryStats(object):
         # Sorting spark dataframe by count column
         df_sorted=df.orderBy('count',ascending=False)
         # Printing message that indicates the number of rows in the spark dataframe. By default, the show() method only shows a maximum of 20 rows
-        print('IMPORTANT!! The result contains ',df_sorted.count(),' rows')
+        print('IMPORTANT!! The result contains ',df_sorted.count(),' rows.')
         return df_sorted # This function returns a spark dataframe
 
     # Function to obtain the upper and lower limits for the +/- 1.5(IQR) rule. This values are used to determine if a value within a spark dataframe column can be considered an outlier
@@ -161,6 +161,7 @@ class visualizations(object):
             # field: String value. It must match a single column name
         # About nulls values: This function does not consider null values on its calculations
         # Importing Libraries and Modules
+        %matplotlib inline
         import seaborn as sns
         # Selecting column. Dropping null values.
         df=dataframe.select(field).dropna(how='any',subset=field)
@@ -169,12 +170,13 @@ class visualizations(object):
         return sns.boxplot(x=panda_df[field]) # This function returns a box plot
     
     # Function to get a time series line chart
-    def time_series_chart(self,dataframe,field,interval,operation,fig_width=16,fig_height=4):
+    def time_series_chart(self,dataframe,field,interval,operation,data=False,fig_width=16,fig_height=4):
          # Parameters:
             # datadrame: must be a pandas dataframe
             # field: String value. It must match a single column name. The function will group the results using the field column
             # interval: String value. Find aliases here: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
             # operation: String value. Operations defined so far: 'count','sum','mean'
+            # data: Boolean value. Default value is False. When True, the function also returns a pandas dataframe with data used in the chart
             # fig_width: Integer value. Default value is 16. This parameter affects the final width of the chart
             # fig_height: Integer value. Default value is 4. This parameter affects the final heigh of the chart
         # About nulls values: This function does not consider null values on its calculations
@@ -212,7 +214,8 @@ class visualizations(object):
         # Setting format of chart legend
         ax=plt.gca()
         plt.legend(bbox_to_anchor=(1.1, 1.1), bbox_transform=ax.transAxes)
-        return analysis_plot.transpose().fillna('').dropna(axis=1,how='all') # This function also shows a pandas dataframe with details by field and time interval
+        if data==True:
+            return analysis_plot.transpose().fillna('').dropna(axis=1,how='all') # This function also shows a pandas dataframe with details by field and time interval
         
 
 class dataManipulation(object):
