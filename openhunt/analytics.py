@@ -161,7 +161,6 @@ class visualizations(object):
             # field: String value. It must match a single column name
         # About nulls values: This function does not consider null values on its calculations
         # Importing Libraries and Modules
-        %matplotlib inline
         import seaborn as sns
         # Selecting column. Dropping null values.
         df=dataframe.select(field).dropna(how='any',subset=field)
