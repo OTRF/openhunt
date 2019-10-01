@@ -17,7 +17,7 @@ pip install openhunt
 Or you can also do the following:
 
 ```
-git clone https://github.com/Cyb3rPanda/openhunt
+git clone https://github.com/hunters-forge/openhunt
 cd openhunt
 pip install
 ```
