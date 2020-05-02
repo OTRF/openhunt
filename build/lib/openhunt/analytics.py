@@ -5,10 +5,70 @@
 
 import pandas as pd
 
-class summaryStats(object):
+
+import matplotlib.pyplot as plt
+
+from pyspark.sql import DataFrame
+from pyspark.sql.types import *
+import pyspark.sql.functions as func
+
+import requests
+import yaml
+
+class ossem(object):
+    #Funcionality to get data dictionaries (yaml) from OSSEM project
+    
+    def getDictionary(self, platform, provider, event):
+        url = 'https://raw.githubusercontent.com/hunters-forge/OSSEM/master/source/data_dictionaries/' + platform + '/' + provider + '/events/'+event+'.yml'
+        file = requests.get(url)
+        fileDict = yaml.safe_load(file.text)
+        return fileDict
+        
+    def getEventDf(self, platform, provider, event):
+        dictionary = self.getDictionary(platform, provider, event)
+        eventFields = dictionary.get('event_fields')
+        eventCode = dictionary.get('event_code')
+        dfBase = pd.DataFrame(columns=['event_code','standard_name','standard_type','name','type','description','sample_value'])
+
+        for i in eventFields:
+            valuesToAdd = list(i.values())
+            valuesToAdd.insert(0,eventCode)
+            seriesToAdd = pd.Series(valuesToAdd, index = dfBase.columns)
+            dfBase = dfBase.append(seriesToAdd,ignore_index = True)
+        return dfBase
+
+    def getEventFields(self, platform, provider, event):
+        df = self.getEventDf(platform, provider, event)
+        eventFields = df['name'].values.tolist()
+        return eventFields
+
+class descriptiveStats(object):
+    #Funcionality to apply descriptive statistics
+
+    #Function to describe a dataframe    
+    def summary(self, dataframe):
+        
+        # Identifying dataframe type, count of fields, and count of records
+        if isinstance(dataframe,pd.DataFrame) == True:
+            dataframeType = 'Pandas Dataframe'
+            countFields = dataframe.shape[0]
+            countRecords = dataframe.shape[1]
+        elif isinstance(dataframe, DataFrame) == True:
+            dataframeType = 'Spark Dataframe'
+            countFields = len(dataframe.columns)
+            countRecords = dataframe.count()
+        else:
+            dataframeType = 'Other'
+            countFields = 'Not supported by this function'
+            countRecords = 'Not supported by this function'
+        
+        # Printing summary of dataframe information
+        print('Dataframe type             : ', dataframeType)
+        print('Number of fields available : ', countFields)
+        print('Number of records available: ', countRecords)
     
     # Function to obtain a pandas dataframe with descriptive statistics for a numerical variable stored in a spark dataframe column.
-    def desc_stats(self, dataframe, field):
+    def numStats(self, dataframe, field):
         # Parameters:
             # datadrame: must be a spark dataframe
             # field: String value. It must match a single column name
@@ -67,21 +127,32 @@ class summaryStats(object):
         summary_stats = pd.DataFrame(data)
         return summary_stats # This function returns a pandas dataframe
 
-    # Function to obtain a spark dataframe with descriptive statistics for a numerical variable
-    def stack_count(self, dataframe, field):
+    # Function to obtain a spark dataframe with stack counting operation over a field
+    def stack_count(self, dataframe, field, ascending = False):
         # Parameters:
-            # datadrame: must be a spark dataframe
+            # datadrame: spark dataframe
             # field: String or List value. It must match column names. When field is a list, the function counts different fields combinations
         # About nulls values: This function does not consider null values on its calculations
         # Importing Libraries and Modules
             # Nothing to import
-        # Selecting column. Dropping null values. Grouping by field using count function. The result is a spark dataframe
-        df=dataframe.select(field).dropna(how='any',subset=field).groupBy(field).count()
-        # Sorting spark dataframe by count column
-        df_sorted=df.orderBy('count',ascending=False)
-        # Printing message that indicates the number of rows in the spark dataframe. By default, the show() method only shows a maximum of 20 rows
-        print('IMPORTANT!! The result contains ',df_sorted.count(),' rows.')
-        return df_sorted # This function returns a spark dataframe
+        
+        if isinstance(dataframe,pd.DataFrame) == True:
+            print('Pandas dataframe: Still working on it!! Coming Soon!!')
+        elif isinstance(dataframe, DataFrame) == True:
+            # Selecting column. Dropping null values.
+            df = dataframe.select(field).dropna(how='any',subset=field)
+            # Grouping by field using count function. The result is a spark dataframe
+            df_count = df.groupBy(field).count()
+            # Sorting spark dataframe by count column
+            df_sorted = df_count.orderBy('count',ascending = ascending)
+            # Printing message that indicates the number of rows in the spark dataframe. By default, the show() method only shows a maximum of 20 rows
+            # Adding a column with relative frequency
+            total_count = df.count()
+            df_final = df_sorted.withColumn('%', func.round(df_sorted['count'].cast(IntegerType())*100/total_count,1))
+            print('IMPORTANT!! The result contains ',df_final.count(),' rows.')
+            return df_final # This function returns a spark dataframe
+        else:
+            print('This function only supports Spark dataframes')
 
     # Function to obtain the upper and lower limits for the +/- 1.5(IQR) rule. This values are used to determine if a value within a spark dataframe column can be considered an outlier
     def iqr_outliers_limits(self, dataframe, field):
