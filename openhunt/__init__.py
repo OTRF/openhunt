@@ -1,3 +1,3 @@
 #!/usr/bin/env python
 
-__all__ = ['logparser','analytics']
+__all__ = ['logparser','descriptiveStatistics','ossem','visualizations']
