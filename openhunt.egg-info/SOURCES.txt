@@ -4,7 +4,9 @@ setup.py
 openhunt/__init__.py
 openhunt/descriptiveStatistics.py
 openhunt/logparser.py
+openhunt/mordorutils.py
 openhunt/ossem.py
+openhunt/utils.py
 openhunt/visualizations.py
 openhunt.egg-info/PKG-INFO
 openhunt.egg-info/SOURCES.txt

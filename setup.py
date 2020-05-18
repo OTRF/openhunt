@@ -10,7 +10,7 @@ with open('README.md')as f:
 
 setuptools.setup (
 	name = 'openhunt',
-	version = '1.6.6',
+	version = '1.6.7',
 	author = 'Jose Rodriguez',
 	description = 'A Python library to expedite the analysis of data during hunting engagements',
 	long_description=long_description,
