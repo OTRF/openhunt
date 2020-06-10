@@ -9,9 +9,13 @@ from io import BytesIO
 from zipfile import ZipFile
 
 def downloadMordorFile(url, dest="/tmp/"):
-    mordorFile = downloadFile(url)
-    mordorJSONPath = decompressJSON(mordorFile)
-    return mordorJSONPath
+    if url[-7:] = '.tar.gz':
+        mordorFile = downloadFile(url)
+        mordorJSONPath = decompressJSON(mordorFile)
+        return mordorJSONPath
+    elif url[-4:] = '.zip':
+        mordorJSONPath = getMordorZipFile(url)
+        return mordorJSONPath
     
 def registerMordorSQLTable(spark, url, tableName):
     mordorJSONPath = downloadMordorFile(url)
