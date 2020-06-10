@@ -143,54 +143,96 @@ def stack_count(dataframe, field, ascending = False):
         print('This function only supports Spark dataframes')
 
 # Function to obtain the upper and lower limits for the +/- 1.5(IQR) rule. This values are used to determine if a value within a spark dataframe column can be considered an outlier
-def iqr_outliers_limits(self, dataframe, field):
+def iqr_outliers_limits(dataframe, field):
     # Paramenters:
         # datadrame: must be a spark dataframe
         # field: String value. It must match a single column name
     # About nulls values: This function does not consider null values on its calculations
     # Importing Libraries and Modules
         # Nothing to import
-    # Selecting column. Dropping null values
-    df=dataframe.select(field).dropna(how='any',subset=field)
-    # Applying approxQuatile function to calculate percentiles 25,50, and 75. The result is a list with the three values
-    quartiles_list=df.approxQuantile(col=field,probabilities=[0.25,0.5,0.75],relativeError=0.05)
-    # Calculating the interquartile range, which is equal to Percentile75 - Percentile25. The interquartile range is a statistic to measure variability in a set of numerical data
-    IQR=quartiles_list[2]-quartiles_list[0]
-    # The lower level is equal to Percentile25 (first element of quartiles_list: index 0) - 1.5 times IQR
-    lower_limit=quartiles_list[0]-1.5*IQR
-    # The upper level is equal to Percentile75 (third element of quartiles_list: index 2) + 1.5 times IQR
-    upper_limit=quartiles_list[2]+1.5*IQR
-    # Creating a list with 2 elements: lower level and upper level
-    limits_list = [lower_limit,upper_limit]
-    return limits_list # This function returns a list
+    if isinstance(dataframe,pd.DataFrame) == True:    
+        # Selecting column. Dropping null values
+        df=dataframe[[field]].dropna(how='any',subset=[field])
+        # Applying approxQuatile function to calculate percentiles 25,50, and 75. The result is a list with the three values
+        quartiles_list=df.quantile([0.25,0.5,0.75])
+        # Calculating the interquartile range, which is equal to Percentile75 - Percentile25. The interquartile range is a statistic to measure variability in a set of numerical data
+        IQR=quartiles_list[field].values[2] - quartiles_list[field].values[0]
+        # The lower level is equal to Percentile25 (first element of quartiles_list: index 0) - 1.5 times IQR
+        lower_limit=quartiles_list.values[0]-1.5*IQR
+        # The upper level is equal to Percentile75 (third element of quartiles_list: index 2) + 1.5 times IQR
+        upper_limit=quartiles_list.values[2]+1.5*IQR
+        # Creating a list with 2 elements: lower level and upper level
+        limits_list = [lower_limit,upper_limit]
+        return limits_list # This function returns a list
+    elif isinstance(dataframe, DataFrame) == True:
+        # Selecting column. Dropping null values
+        df=dataframe.select(field).dropna(how='any',subset=field)
+        # Applying approxQuatile function to calculate percentiles 25,50, and 75. The result is a list with the three values
+        quartiles_list=df.approxQuantile(col=field,probabilities=[0.25,0.5,0.75],relativeError=0.05)
+        # Calculating the interquartile range, which is equal to Percentile75 - Percentile25. The interquartile range is a statistic to measure variability in a set of numerical data
+        IQR=quartiles_list[2]-quartiles_list[0]
+        # The lower level is equal to Percentile25 (first element of quartiles_list: index 0) - 1.5 times IQR
+        lower_limit=quartiles_list[0]-1.5*IQR
+        # The upper level is equal to Percentile75 (third element of quartiles_list: index 2) + 1.5 times IQR
+        upper_limit=quartiles_list[2]+1.5*IQR
+        # Creating a list with 2 elements: lower level and upper level
+        limits_list = [lower_limit,upper_limit]
+        return limits_list # This function returns a list
+    else:
+        print('This function only supports Pandas and Spark dataframes')  
 
 # Function to add a column with outlier/normal tag to a spark dataframe based on IQR rule (+/- 1.5 IQR)
-def outlier_tag(self,dataframe,field,filter=False):
+def outlier_tag(dataframe,field,filter=False):
     # Paramenters:
-        # datadrame: must be a spark dataframe
+        # datadrame: pandas or spark dataframe
         # field: String value. It must match a single column name
-        # filter: Boolean value. Default value is False. When False, the function returns the original spark dataframe with new column 'outlier_tag'. When True, the function returns the original spark dataframe with new column 'outlier_tag' and filtered by 'outlier_tag' using the value 'outlier'
+        # filter: Boolean value. Default value is False. When False, the function returns the original dataframe with new column 'outlier_tag'. When True, the function returns the original dataframe with new column 'outlier_tag' and filtered by 'outlier_tag' using the value 'outlier'
     # About nulls values: This function does not consider null values on its calculations
     # Importing Libraries and Modules
-    import pyspark.sql.functions as F
-    # Dropping rows where field column shows null values
-    df=dataframe.dropna(how='any',subset=field)
-    # Calling iqr_outliers_limits function
-    limits_IQR_rule = self.iqr_outliers_limits(df,field)
-    # Adding new column to the dataframe with tag 'outlier' or 'normal'
-    df_tagged=df.withColumn('outlier_tag',F.when((F.col(field)<limits_IQR_rule[0]) | (F.col(field)>limits_IQR_rule[1]), 'outlier').otherwise('normal'))
-    # Filtering dataframe by 'outlier_tag' column using value 'outlier'
-    df_filtered=df_tagged.filter(df_tagged.outlier_tag == 'outlier')
-    # Using conditional statement based on 'filter' parameter
-    if filter==True:
-        new_df=df_filtered
+    if isinstance(dataframe,pd.DataFrame) == True:
+        # Dropping rows where field column shows null values
+        df=dataframe.dropna(how='any',subset=[field])
+        # Calling iqr_outliers_limits function
+        limits_IQR_rule = iqr_outliers_limits(df,field)
+        # Adding new column to the dataframe with tag 'outlier' or 'normal'
+        df.loc[df[field].values < limits_IQR_rule[0], 'outlier_tag'] = 'outlier'
+        df.loc[df[field].values > limits_IQR_rule[1], 'outlier_tag'] = 'outlier'
+        df.loc[(df['outlier_tag'].values != 'outlier'), 'outlier_tag'] = 'normal'       
+        df_tagged = df
+        # Using conditional statement based on 'filter' parameter
+        # Filtering dataframe by 'outlier_tag' column using value 'outlier'
+        df_filtered=df_tagged[df_tagged['outlier_tag'] == 'outlier']
+        if filter==True:
+            new_df=df_filtered
+        else:
+            new_df=df_tagged
+        # Counting number of rows in df_filtered ('outlier')
+        outliers_qty=len(df_filtered.index)
+        # Printing message that indicates the number of outliers in the dataframe. By default, the show() method only shows a maximum of 20 rows
+        print('There are ',outliers_qty,' outliers out of ',len(df_tagged.index),' within ',field,' values')
+        return new_df
+    elif isinstance(dataframe, DataFrame) == True:
+        import pyspark.sql.functions as F
+        # Dropping rows where field column shows null values
+        df=dataframe.dropna(how='any',subset=field)
+        # Calling iqr_outliers_limits function
+        limits_IQR_rule = iqr_outliers_limits_2(df,field)
+        # Adding new column to the dataframe with tag 'outlier' or 'normal'
+        df_tagged=df.withColumn('outlier_tag',F.when((F.col(field)<limits_IQR_rule[0]) | (F.col(field)>limits_IQR_rule[1]), 'outlier').otherwise('normal'))
+        # Filtering dataframe by 'outlier_tag' column using value 'outlier'
+        df_filtered=df_tagged.filter(df_tagged.outlier_tag == 'outlier')
+        # Using conditional statement based on 'filter' parameter
+        if filter==True:
+            new_df=df_filtered
+        else:
+            new_df=df_tagged
+        # Counting number of rows in df_filtered ('outlier')
+        outliers_qty=df_filtered.count()
+        # Printing message that indicates the number of outliers in the dataframe. By default, the show() method only shows a maximum of 20 rows
+        print('There are ',outliers_qty,' outliers within ',field,' values')
+        return new_df
     else:
-        new_df=df_tagged
-    # Counting number of rows in df_filtered ('outlier')
-    outliers_qty=df_filtered.count()
-    # Printing message that indicates the number of outliers in the dataframe. By default, the show() method only shows a maximum of 20 rows
-    print('There are ',outliers_qty,' outliers within ',field,' values')
-    return new_df # This function returns a spark dataframe
+        print('This function only supports Pandas and Spark dataframes')
 
 
 
