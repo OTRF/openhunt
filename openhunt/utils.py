@@ -4,6 +4,7 @@
 import json
 import requests
 import tarfile
+from zipfile import ZipFile
 from urllib.parse import urlparse
 from pathlib import Path
 import pandas as pd
