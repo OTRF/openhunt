@@ -1,9 +1,9 @@
 Metadata-Version: 2.1
 Name: openhunt
-Version: 1.7.4
+Version: 1.7.5
 Summary: A Python library to expedite the analysis of data during hunting engagements
-Home-page: https://github.com/Cyb3rPanda/openhunt
-Author: Jose Rodriguez
+Home-page: https://github.com/OTRF/openhunt
+Author: Jose Rodriguez @Cyb3rPandaH
 License: GNU General Public License v3 (GPLv3)
 Description: # OpenHunt
         

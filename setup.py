@@ -10,12 +10,12 @@ with open('README.md')as f:
 
 setuptools.setup (
 	name = 'openhunt',
-	version = '1.7.4',
-	author = 'Jose Rodriguez',
+	version = '1.7.5',
+	author = 'Jose Rodriguez @Cyb3rPandaH',
 	description = 'A Python library to expedite the analysis of data during hunting engagements',
 	long_description=long_description,
 	long_description_content_type="text/markdown",
-	url="https://github.com/Cyb3rPanda/openhunt",
+	url="https://github.com/OTRF/openhunt",
 	keywords="threat hunting python pandas jupyter notebook",
 	packages=setuptools.find_packages(),
 	install_requires=[
@@ -23,7 +23,9 @@ setuptools.setup (
 		'altair',
 		'seaborn',
 		'matplotlib',
-		'pyspark'
+		'pyspark',
+		'plotly',
+		'networkx'
     	],
 	license='GNU General Public License v3 (GPLv3)',
 	classifiers=[

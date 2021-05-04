@@ -7,6 +7,9 @@ import pandas as pd
 
 
 import matplotlib.pyplot as plt, seaborn as sns
+import matplotlib
+import plotly.graph_objects as go
+import networkx as nx
 
 from pyspark.sql import DataFrame
 from pyspark.sql.types import *
@@ -15,10 +18,7 @@ import pyspark.sql.functions as func
     
 # Function to get a horizontal bar chart with data labels
 def barh_chart(dataframe,xfield,yfield,title,xlabel = '',ylabel = '',figSize = (12,8)):
-    '''
-    I did not create this function. You can find its reference here: 
-    https://stackoverflow.com/questions/28931224/adding-value-labels-on-a-matplotlib-bar-chart
-    '''
+    ## Code Reference: https://stackoverflow.com/questions/28931224/adding-value-labels-on-a-matplotlib-bar-chart
     # Bring some raw data.
     if isinstance(dataframe,pd.DataFrame) == True:
         frequencies = dataframe[xfield].values[::-1].tolist()
@@ -163,3 +163,38 @@ def time_series_dataframe(dataframe,time_field):
     # Dropping null values. Creating a new column with timestamp format. Dropping original time_field. Converting spark dataframe into pandas dataframe. Setting 'timestamp' as dataframe index. Sorting new index
     df = dataframe.dropna(how='any',subset = time_field).withColumn('timestamp',F.to_utc_timestamp(time_field,tz = 'UTC')).drop(time_field).toPandas().set_index('timestamp').sort_index()
     return df # This functions returns a pandas dataframe
+
+# Function to get a network graph with techniques, subtechniques, data sources, data components, and security events
+def attack_network_graph(mapping):
+    ## Code Reference: https://towardsdatascience.com/customizing-networkx-graphs-f80b4e69bedf
+    ## Creating dataframe for relationships
+    technique_to_data_source = mapping[['technique','data_source']].rename(columns={'technique':'source','data_source':'target'})
+    data_source_to_component = mapping[['data_source','data_component']].rename(columns={'data_source':'source','data_component':'target'})
+    component_to_event = mapping[['data_component','event_id']].rename(columns={'data_component':'source','event_id':'target'})
+    df = pd.concat([technique_to_data_source,data_source_to_component,component_to_event]).drop_duplicates()
+    ## Creating dataframe nodes characteristics
+    technique = mapping[['technique']].rename(columns={'technique':'node'})
+    technique['type'] = 'technique'
+    data_source = mapping[['data_source']].rename(columns={'data_source':'node'})
+    data_source['type'] = 'data_source'
+    component = mapping[['data_component']].rename(columns={'data_component':'node'})
+    component['type'] = 'component'
+    event = mapping[['event_id']].rename(columns={'event_id':'node'})
+    event['type'] = 'event'
+    nodes_characteristics = pd.concat([technique,data_source,component,event]).dropna().drop_duplicates()
+    ## Defining size of graph
+    fig, ax = plt.subplots(figsize=(15,10))
+    ## Creating graph object
+    G = nx.from_pandas_edgelist(df, 'source', 'target', create_using = nx.Graph())
+    ## Making types into categories
+    nodes_characteristics = nodes_characteristics.set_index('node')
+    # To validate if there are duplicated values before applying reindex: print(nodes_characteristics[nodes_characteristics.index.duplicated()])
+    nodes_characteristics = nodes_characteristics.reindex(G.nodes())
+    nodes_characteristics['type'] = pd.Categorical(nodes_characteristics['type'])
+    nodes_characteristics['type'].cat.codes
+    ## Specifying Color
+    cmap = matplotlib.colors.ListedColormap(['lime','cyan','orange','gold','lightgray'])
+    ## Setting nodes sizes
+    node_sizes = [10000 if entry == 'technique'  else (8000 if entry == 'data_source' else (5000 if entry == 'component' else 2000)) for entry in nodes_characteristics.type]
+    ## Drawing graph
+    nx.draw(G, with_labels=True, font_size = 15, node_size = node_sizes, node_color = nodes_characteristics['type'].cat.codes,cmap = cmap, node_shape = "o", pos = nx.fruchterman_reingold_layout(G, k=0.4))
