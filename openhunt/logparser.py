@@ -4,6 +4,7 @@
 # License: GNU General Public License v3 (GPLv3)
 
 import pandas as pd
+import xml.etree.ElementTree as ET
 
 class winlogbeat(object):
         # Function to parse winlogbeat data up to version 6
@@ -46,3 +47,96 @@ class winlogbeat(object):
                 else:
                         exit
                 return df
+
+
+# Function to parse xml files into pandas dataframe
+def xml_dataframe(xml_path):
+        '''
+        In order to generate xml from EVTX use the following commands:
+        Reference: https://www.alishaaneja.com/evtx/
+        1) Clone the repository: git clone https://github.com/williballenthin/python-evtx.git
+        2) Change directory: cd python-evtx
+        3) Install Libraries: python3 setup.py install
+        4) Change Directory: cd scripts
+        5) Run to generate xml file: python evtx_dump.py ../../Security.evtx > ../../security_test.xml 
+        '''
+        
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+
+        column = []
+        values = []
+        for event in root:
+                record_column = []
+                record_values = []
+                for block in event:
+                        for element in block:
+                                if element.tag[-8:] == 'Provider':
+                                        for x, y in element.attrib.items():
+                                                record_column.append(x)
+                                                record_values.append(y)
+                                if element.tag[-7:] == 'EventID':
+                                        record_column.append('EventID')
+                                        record_values.append(element.text)
+                                if element.tag[-7:] == 'Version':
+                                        record_column.append('Version')
+                                        record_values.append(element.text)
+                                if element.tag[-5:] == 'Level':
+                                        record_column.append('Level')
+                                        record_values.append(element.text)
+                                if element.tag[-4:] == 'Task':
+                                        record_column.append('Task')
+                                        record_values.append(element.text)
+                                if element.tag[-6:] == 'Opcode':
+                                        record_column.append('Opcode')
+                                        record_values.append(element.text)
+                                if element.tag[-8:] == 'Keywords':
+                                        record_column.append('Keywords')
+                                        record_values.append(element.text)
+                                if element.tag[-11:] == 'TimeCreated':
+                                        for x, y in element.attrib.items():
+                                                record_column.append(x)
+                                                record_values.append(y)
+                                if element.tag[-13:] == 'EventRecordID':
+                                        record_column.append('EventRecordID')
+                                        record_values.append(element.text)
+                                if element.tag[-11:] == 'Correlation':
+                                        for x, y in element.attrib.items():
+                                                record_column.append(x)
+                                                record_values.append(y)
+                                if element.tag[-9:] == 'Execution':
+                                        for x, y in element.attrib.items():
+                                                record_column.append(x)
+                                                record_values.append(y)
+                                if element.tag[-7:] == 'Channel':
+                                        record_column.append('Task')
+                                        record_values.append(element.text)
+                                if element.tag[-8:] == 'Computer':
+                                        record_column.append('Computer')
+                                        record_values.append(element.text)
+                                if element.tag[-8:] == 'Security':
+                                        for x, y in element.attrib.items():
+                                                record_column.append(x)
+                                                record_values.append(y)
+                                if element.tag[-4:] == 'Data':
+                                        for x, y in element.attrib.items():
+                                                record_column.append(y)
+                                        record_values.append(element.text)
+                column.append(record_column)
+                values.append(record_values)
+
+        telemetry_list = []
+        for i in range(len(column)):
+                event_dictionary = {}
+                event_keys = column[i]
+                event_values = values[i]
+                for key in event_keys:
+                        for value in event_values:
+                                event_dictionary[key] = value
+                                event_values.remove(value)
+                                break
+                telemetry_list.append(event_dictionary)
+        
+        df = pd.DataFrame(telemetry_list)
+        
+        return(df)
