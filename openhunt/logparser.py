@@ -48,6 +48,21 @@ class winlogbeat(object):
                         exit
                 return df
 
+# Function to parse json files (Wireshark) into pandas dataframe
+def json_wireshark_dataframe(json_path):
+        '''
+        Obtain json file using: File -> Export Packet Dissections -> as json
+        '''
+        df = pd.read_json(json_path)
+        df = df['_source'].apply(pd.Series)['layers'].apply(pd.Series)
+        columns_names = df.columns
+
+        telemetry = df[columns_names[0]].apply(pd.Series)
+        if len(columns_names) > 1:
+                for i in range(1,len(columns_names)):
+                        df_layers = df[columns_names[i]].apply(pd.Series)
+                        telemetry = pd.concat([telemetry,df_layers], axis = 1)
+        return telemetry
 
 # Function to parse xml files into pandas dataframe
 def xml_dataframe(xml_path):
