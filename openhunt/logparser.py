@@ -48,6 +48,86 @@ class winlogbeat(object):
                         exit
                 return df
 
+# Function to parse event data exported from AzureSentinelToGo: CSV File or Pandas Dataframe
+def parse_azure_event_data(data_source):
+        # If data_source is a path to .csv file
+        if isinstance(data_source,pd.DataFrame) == False:
+                data_source = pd.read_csv(data_source)
+        # If data_source is a Pandas dataframe
+        if data_source['Type'].unique()[0] == 'Event':
+                columns = []
+                values = []
+
+                for record in data_source.EventData:
+                        record_columns = []
+                        record_values = []
+                        event = ET.fromstring(record)
+                        #for x, y in event.attrib.items():
+                        #    record_columns.append(x)
+                        #    record_values.append(y)
+                        for content in event:
+                                for data in content:
+                                        for r, c in data.attrib.items():
+                                                record_columns.append(c)
+                                                record_values.append(data.text)
+                        columns.append(record_columns)
+                        values.append(record_values)
+
+                telemetry_list = []
+                for i in range(len(columns)):
+                        event_dictionary = {}
+                        event_keys = columns[i]
+                        event_values = values[i]
+                        for key in event_keys:
+                                for value in event_values:
+                                        event_dictionary[key] = value
+                                        event_values.remove(value)
+                                        break
+                        telemetry_list.append(event_dictionary)
+
+                event_data = pd.DataFrame(telemetry_list)
+
+                data_source['EventDescription'] = data_source['RenderedDescription'].apply(lambda x : x[:x.find(':')])
+                data_source = data_source.rename(columns={'Source': 'EventSourceName'})
+                data_source = data_source[['TimeGenerated [UTC]','Computer','EventSourceName','EventID','EventDescription']]
+
+                dataframe = pd.concat([data_source, event_data], axis = 1).dropna(how = 'all', axis = 1)
+
+        elif data_source['Type'].unique()[0] == 'SecurityEvent':
+                columns = []
+                values = []
+
+                for record in data_source.EventData:
+                        record_columns = []
+                        record_values = []
+                        event = ET.fromstring(record)
+                        for content in event:
+                                for r, c in content.attrib.items():
+                                        record_columns.append(c)
+                                        record_values.append(content.text)
+                        columns.append(record_columns)
+                        values.append(record_values)
+
+                telemetry_list = []
+                for i in range(len(columns)):
+                        event_dictionary = {}
+                        event_keys = columns[i]
+                        event_values = values[i]
+                        for key in event_keys:
+                                for value in event_values:
+                                        event_dictionary[key] = value
+                                        event_values.remove(value)
+                                        break
+                        telemetry_list.append(event_dictionary)
+
+                event_data = pd.DataFrame(telemetry_list)
+
+                data_source['EventDescription'] = data_source['Activity'].apply(lambda x : x[x.find('-') + 2:])
+                data_source = data_source[['TimeGenerated [UTC]','Computer','EventSourceName','EventID','EventDescription']]
+
+                dataframe = pd.concat([data_source, event_data], axis = 1).dropna(how = 'all', axis = 1)
+        return(dataframe)
+
 # Function to parse json files (Wireshark) into pandas dataframe
 def json_wireshark_dataframe(json_path):
         '''
