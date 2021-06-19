@@ -18,7 +18,7 @@ def getDictionary(platform = '', provider = '', event = '', url = None):
         provider = 'Microsoft-Windows-Security-Auditing'
 
     if url == None:
-        urlBase = 'https://raw.githubusercontent.com/hunters-forge/OSSEM/master/source/data_dictionaries/'
+        urlBase = 'https://raw.githubusercontent.com/OTRF/OSSEM-DD/'
         url = urlBase + platform + '/' + provider + '/events/'+event+'.yml'
         ossemFile = requests.get(url)
         ossemDict = yaml.safe_load(ossemFile.text)
