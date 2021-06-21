@@ -3,9 +3,14 @@
 # Author: Jose Rodriguez (@Cyb3rPandaH)
 # License: GNU General Public License v3 (GPLv3)
 
+# Libraries to manipulate data
 import pandas as pd
+from pandas import json_normalize
 
+# Libraries to handle execution errors
+import sys
 
+# Libraries to create visualizations
 import matplotlib.pyplot as plt, seaborn as sns
 import matplotlib
 import plotly.graph_objects as go
