@@ -112,7 +112,7 @@ def getDictionariesNames(platform = '', provider = '', url = ''):
                     event_files_names.remove(event_name[:event_name.find('_v') + 2] + str(version) + '.yml')
     return event_files_names
 
-def getDictionary(platform = '', provider = '', event = '', url = ''):
+def getDictionary(platform = '', provider = '', event = '', url = '',view = 'all'):
     # validating parameters input
     if platform == '' and provider == '' and event == '' and url == '':
         sys.exit('ERROR: Insert valid OSSEM platform ,provider, and event or an OSSEM url, but not all of them.')
@@ -196,8 +196,13 @@ def getDictionary(platform = '', provider = '', event = '', url = ''):
         # Updating list of dictionaries
         dict_list.append(ossem_dict)
     # creating pandas dataframe
-    df_exploded = pd.DataFrame(dict_list).explode('event_fields').reset_index(drop = True)
-    df = pd.concat([df_exploded,df_exploded['event_fields'].apply(pd.Series)], axis = 1).drop(['event_fields','references','tags'], axis = 1)
+    df_exploded = pd.DataFrame(dict_list).rename(columns={'description':'event_description'}).explode('event_fields').reset_index(drop = True)
+    df = pd.concat([df_exploded,df_exploded['event_fields'].apply(pd.Series)], axis = 1).drop(['event_fields','references','tags'], axis = 1).rename(columns={'description':'field_description','event_code':'event_id'})
+    # filtering columns
+    if view == 'summary':
+        df = df[['title','standard_name','name','field_description','sample_value']]
+    if view not in ['all','summary']:
+        sys.exit('ERROR: Insert a valid option for view: all or summary.')
     return df
 
 ###### OSSEM detection modeling functions ######
@@ -207,10 +212,10 @@ def getRelationships():
     url = 'https://raw.githubusercontent.com/OTRF/OSSEM-DM/main/relationships/_all_ossem_relationships.yml'
     yaml_file = requests.get(url)
     list_of_dict = yaml.safe_load(yaml_file.text)
-    relationships_df = pd.DataFrame(list_of_dict).explode('security_events').reset_index(drop = True)
+    relationships_df = pd.DataFrame(list_of_dict).rename(columns={'name':'title'}).explode('security_events').reset_index(drop = True)
     # Splitting columns with dictionaries
     attack_df = relationships_df['attack'].apply(pd.Series)
     behavior_df = relationships_df['behavior'].apply(pd.Series)
-    security_events_df = relationships_df['security_events'].apply(pd.Series)
+    security_events_df = relationships_df['security_events'].apply(pd.Series).rename(columns={'name':'event_description'})
     all_relationships = pd.concat([relationships_df, attack_df, behavior_df, security_events_df], axis = 1).drop(['attack','behavior','security_events'], axis = 1)
     return all_relationships
