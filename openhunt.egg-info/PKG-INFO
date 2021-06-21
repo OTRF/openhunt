@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: openhunt
-Version: 1.8.2
+Version: 1.8.3
 Summary: A Python library to expedite the analysis of data during hunting engagements
 Home-page: https://github.com/OTRF/openhunt
 Author: Jose Rodriguez @Cyb3rPandaH

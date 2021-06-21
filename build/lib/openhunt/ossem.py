@@ -200,7 +200,7 @@ def getDictionary(platform = '', provider = '', event = '', url = '',view = 'all
     df = pd.concat([df_exploded,df_exploded['event_fields'].apply(pd.Series)], axis = 1).drop(['event_fields','references','tags'], axis = 1).rename(columns={'description':'field_description','event_code':'event_id'})
     # filtering columns
     if view == 'summary':
-        df = df[['title','standard_name','name','field_description','sample_value']]
+        df = df[['title','event_id','standard_name','name','field_description','sample_value']]
     if view not in ['all','summary']:
         sys.exit('ERROR: Insert a valid option for view: all or summary.')
     return df
