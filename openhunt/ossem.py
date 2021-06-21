@@ -130,7 +130,7 @@ def getDictionary(platform = '', provider = '', event = '', url = ''):
             yaml_files_list = []
             for i in event:
                 for yaml_file in yaml_files_names:
-                    if i in yaml_file:
+                    if str(i) in yaml_file:
                         yaml_files_list.append(yaml_file)
         else:
             sys.exit('ERROR: Insert a string or list object for event parameter.')
