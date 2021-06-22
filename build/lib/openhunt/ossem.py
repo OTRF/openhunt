@@ -20,6 +20,13 @@ import yaml
 # Libraries to handle xml files
 import xml.etree.ElementTree as ET
 
+# Libraries to create visualizations
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+
+import networkx as nx
+
 ###### OSSEM data dictionaries functions ######
 
 def getDictionaryName(platform = '', provider = '', url = ''):
@@ -219,3 +226,44 @@ def getRelationshipContent():
     security_events_df = relationships_df['security_events'].apply(pd.Series).rename(columns={'name':'event_description'})
     all_relationships = pd.concat([relationships_df, attack_df, behavior_df, security_events_df], axis = 1).drop(['attack','behavior','security_events'], axis = 1)
     return all_relationships
+
+###### OSSEM visualizations functions ######
+
+def event_to_field_network(df,type = 'original'):
+    ## Code Reference: https://towardsdatascience.com/customizing-networkx-graphs-f80b4e69bedf
+    ## defining type of analysis
+    if type == 'standard':
+        name = 'standard_name'
+    else:
+        name = 'name'
+    ## Creating dataframe for relationships
+    ossem = df[['event_id',name]].rename(columns={'event_id':'source',name:'target'}).drop_duplicates()
+    ## Creating dataframe nodes characteristics
+    event = df[['event_id']].rename(columns={'event_id':'node'})
+    event['type'] = 'event'
+    field_name = df[[name]].rename(columns={name:'node'})
+    field_name['type'] = 'data_field'
+    nodes_characteristics = pd.concat([event,field_name]).dropna().drop_duplicates()
+    ## Defining size of graph
+    fig, ax = plt.subplots(figsize=(20,10))
+    ## Creating graph object
+    G = nx.from_pandas_edgelist(ossem, 'source', 'target', create_using = nx.Graph())
+    ## Making types into categories
+    nodes_characteristics = nodes_characteristics.set_index('node')
+    # To validate if there are duplicated values before applying reindex: print(nodes_characteristics[nodes_characteristics.index.duplicated()])
+    nodes_characteristics = nodes_characteristics.reindex(G.nodes())
+    nodes_characteristics['type'] = pd.Categorical(nodes_characteristics['type'])
+    nodes_characteristics['type'].cat.codes
+    ## Specifying Color
+    cmap = matplotlib.colors.ListedColormap(['lime','lightgray'])
+    ## Setting nodes sizes
+    node_sizes = [4000 if entry == 'event'  else (9000 if entry == 'data_field' else 0) for entry in nodes_characteristics.type]
+    ## Drawing graph
+    nx.draw(G, with_labels=True, font_size = 14, node_size = node_sizes, node_color = nodes_characteristics['type'].cat.codes,cmap = cmap, node_shape = "o", pos = nx.fruchterman_reingold_layout(G, k=0.4))
+    ## Creating legend with color box
+    leg_event = mpatches.Patch(color='lightgray', label='Event')
+    leg_data_field = mpatches.Patch(color='lime', label='Data Field')
+    plt.legend(handles=[leg_event,leg_data_field],loc = 'best', fontsize = 13)
+    ## Margins
+    plt.margins(0.1)
+    plt.show()
