@@ -22,7 +22,7 @@ import xml.etree.ElementTree as ET
 
 ###### OSSEM data dictionaries functions ######
 
-def getDictionariesNames(platform = '', provider = '', url = ''):
+def getDictionaryName(platform = '', provider = '', url = ''):
     # validating parameters input
     if platform == '' and provider == '' and url == '':
         sys.exit('ERROR: Insert valid OSSEM platform and provider or an OSSEM url, but not all of them.')
@@ -112,14 +112,14 @@ def getDictionariesNames(platform = '', provider = '', url = ''):
                     event_files_names.remove(event_name[:event_name.find('_v') + 2] + str(version) + '.yml')
     return event_files_names
 
-def getDictionary(platform = '', provider = '', event = '', url = '',view = 'all'):
+def getDictionaryContent(platform = '', provider = '', event = '', url = '',view = 'all'):
     # validating parameters input
     if platform == '' and provider == '' and event == '' and url == '':
         sys.exit('ERROR: Insert valid OSSEM platform ,provider, and event or an OSSEM url, but not all of them.')
     # defining url based on parameters. If url parameter is not empty, the function will prioritize this parameter.
     elif platform != '' and provider != '' and event != '' and url == '':
         # getting names for platform and provider
-        yaml_files_names = getDictionariesNames(platform, provider, url)
+        yaml_files_names = getDictionaryName(platform, provider, url)
         # getting yaml file name (considering version)
         if isinstance(event, str):
             yaml_files_list = []
@@ -207,7 +207,7 @@ def getDictionary(platform = '', provider = '', event = '', url = '',view = 'all
 
 ###### OSSEM detection modeling functions ######
 
-def getRelationships():
+def getRelationshipContent():
     # getting yaml content
     url = 'https://raw.githubusercontent.com/OTRF/OSSEM-DM/main/relationships/_all_ossem_relationships.yml'
     yaml_file = requests.get(url)
